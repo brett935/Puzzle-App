@@ -12,91 +12,67 @@ package com.brettnapier.puzzle;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.Paint;
-import android.graphics.Rect;
-import android.graphics.drawable.BitmapDrawable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.view.DragEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity {
 
-    int x; //x coordinate of touch
-    int y; //y coordinate of touch
+    int pressX; //x coordinate of touch
+    int pressY; //y coordinate of touch
+    int releaseX; //x coordinate of release
+    int releaseY; //y coordinate of release
+    int width;
+    int height;
+    int quarterWidth;
+    int quarterHeight;
+    ImageView iv;
+    Canvas c;
+    Bitmap b;
+    Bitmap[] bArray;
+    int[] bArrayInt = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+    int[] solvedArrayInt = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+    TextView solvedText;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        //get text view to display if the puzzle was solved
+        solvedText = (TextView) findViewById( R.id.txtview_solved );
+
+        //create shuffle button
+        Button btnShuffle = (Button) findViewById( R.id.btn_shuffle );
+        btnShuffle.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                shuffle();
+                drawBitmapArray();
+            }
+        });
 
         //use bitmap factory to get the picture
         Bitmap picInit = BitmapFactory.decodeResource(getResources(), R.drawable.shannon);
-        Bitmap pic = picInit.copy(Bitmap.Config.ARGB_8888, true); //make a copy of the picture that we can edit
+        Bitmap picLarge = picInit.copy(Bitmap.Config.ARGB_8888, true); //make a copy of the picture that we can edit
+        Bitmap pic = picLarge.createScaledBitmap(picLarge, 1000, 1000, false);
 
         //should scale the image to the size of the screen
 
         //set image in the view
-        ImageView iv = (ImageView) findViewById(R.id.imageView);
+        iv = (ImageView) findViewById(R.id.imageView);
         //iv.setImageBitmap(pic);
 
         //get basic information about the picture
-        final int width = pic.getWidth();
-        final int height = pic.getHeight();
-        final int quarterWidth = width / 4;
-        final int quarterHeight = height / 4;
-
-        /*
-        //declare arrays to hold blocks of the picture
-        int [] p1 = new int[quarterWidth*quarterHeight];
-        int [] p2 = new int[quarterWidth*quarterHeight];
-        int [] p3 = new int[quarterWidth*quarterHeight];
-        int [] p4 = new int[quarterWidth*quarterHeight];
-        int [] p5 = new int[quarterWidth*quarterHeight];
-        int [] p6 = new int[quarterWidth*quarterHeight];
-        int [] p7 = new int[quarterWidth*quarterHeight];
-        int [] p8 = new int[quarterWidth*quarterHeight];
-        int [] p9 = new int[quarterWidth*quarterHeight];
-        int [] p10 = new int[quarterWidth*quarterHeight];
-        int [] p11 = new int[quarterWidth*quarterHeight];
-        int [] p12 = new int[quarterWidth*quarterHeight];
-        int [] p13 = new int[quarterWidth*quarterHeight];
-        int [] p14 = new int[quarterWidth*quarterHeight];
-        int [] p15 = new int[quarterWidth*quarterHeight];
-        int [] p16 = new int[quarterWidth*quarterHeight];
-
-        //copy pieces from picture
-        //1st row
-        pic.getPixels(p1, 0, quarterWidth, 0, 0, quarterWidth, quarterHeight);
-        pic.getPixels(p2, 0, quarterWidth, quarterWidth, 0, quarterWidth, quarterHeight);
-        pic.getPixels(p3, 0, quarterWidth, quarterWidth*2, 0, quarterWidth, quarterHeight);
-        pic.getPixels(p4, 0, quarterWidth, quarterWidth*3, 0, quarterWidth, quarterHeight);
-        //2nd row
-        pic.getPixels(p5, 0, quarterWidth, 0, quarterHeight, quarterWidth, quarterHeight);
-        pic.getPixels(p6, 0, quarterWidth, quarterWidth, quarterHeight, quarterWidth, quarterHeight);
-        pic.getPixels(p7, 0, quarterWidth, quarterWidth*2, quarterHeight, quarterWidth, quarterHeight);
-        pic.getPixels(p8, 0, quarterWidth, quarterWidth*3, quarterHeight, quarterWidth, quarterHeight);
-        //3rd row
-        pic.getPixels(p9, 0, quarterWidth, 0, quarterHeight*2, quarterWidth, quarterHeight);
-        pic.getPixels(p10, 0, quarterWidth, quarterWidth, quarterHeight*2, quarterWidth, quarterHeight);
-        pic.getPixels(p11, 0, quarterWidth, quarterWidth*2, quarterHeight*2, quarterWidth, quarterHeight);
-        pic.getPixels(p12, 0, quarterWidth, quarterWidth*3, quarterHeight*2, quarterWidth, quarterHeight);
-        //4th row
-        pic.getPixels(p13, 0, quarterWidth, 0, quarterHeight*3, quarterWidth, quarterHeight);
-        pic.getPixels(p14, 0, quarterWidth, quarterWidth, quarterHeight*3, quarterWidth, quarterHeight);
-        pic.getPixels(p15, 0, quarterWidth, quarterWidth*2, quarterHeight*3, quarterWidth, quarterHeight);
-        pic.getPixels(p16, 0, quarterWidth, quarterWidth*3, quarterHeight*3, quarterWidth, quarterHeight);
-
-        //move the pieces we copied
-        //pic.setPixels(p16, 0, quarterWidth, quarterWidth*3, quarterHeight*1, quarterWidth, quarterHeight);
-        */
-
-
+        width = pic.getWidth();
+        height = pic.getHeight();
+        quarterWidth = width / 4;
+        quarterHeight = height / 4;
 
         /*
         Here is how the pictures is divided
@@ -134,14 +110,156 @@ public class MainActivity extends AppCompatActivity {
         Bitmap p16 = Bitmap.createBitmap(pic,quarterWidth*3, quarterHeight*3, quarterWidth, quarterHeight);
 
         //draw multiple images to a new bitmap using canvas
-        Bitmap b = Bitmap.createBitmap(height,width, Bitmap.Config.ARGB_8888);
-        Canvas c = new Canvas(b);
+        b = Bitmap.createBitmap(height,width, Bitmap.Config.ARGB_8888);
+        c = new Canvas(b);
        // c.drawBitmap(p1, 200, 200, null);
         //c.drawBitmap(p2, 200+quarterWidth, 200, null);
         iv.setImageBitmap(b); //draw the bitmap that contains all the other images
 
 
-        Bitmap[] bArray  = new Bitmap[]{p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16}; //array to hold all pieces of picture
+        //array to hold all pieces of picture
+        bArray  = new Bitmap[]{p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16};
+
+        shuffle();
+        drawBitmapArray();
+
+        //iv.getLocationOnScreen();
+        int[] coords = {0,0};
+
+        iv.getLocationOnScreen(coords);
+        //bArray[i].getLocationOnScreen(coords);
+        //Toast.makeText(getBaseContext(), "Coords of imageView are x:" +coords[0] + " y:" + coords[1], Toast.LENGTH_LONG).show();
+
+    }
+
+    //detects touch and release coordinates
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        int x = (int)event.getX();
+        int y = (int)event.getY();
+        switch (event.getAction()) {
+
+            case MotionEvent.ACTION_DOWN: {
+                pressX = x;
+                pressY = y;
+                //Toast.makeText(getBaseContext(), "Pressed at x=" + pressX + " y=" + pressY, Toast.LENGTH_SHORT).show();
+
+                break;
+            } case MotionEvent.ACTION_UP: {
+                releaseX = x;
+                releaseY = y;
+                //Toast.makeText(getBaseContext(), "Released at x=" + releaseX + " y=" + releaseY, Toast.LENGTH_SHORT).show();
+                break;
+            }
+            default:{
+                break;
+            }
+
+        }
+        int firstTile = findTileQuadrant(pressX, pressY); //find first tile clicked
+        int secondTile = findTileQuadrant(releaseX, releaseY);
+
+        switchTile(firstTile, secondTile);
+        return true;
+    }
+
+    //swap touched tile on released tile
+    public void switchTile(int tile1, int tile2){
+        //switch the tiles in the picture array
+        tile1 = tile1 - 1;
+        tile2 = tile2 -1;
+
+        Bitmap temp = bArray[tile1];
+        bArray[tile1] = bArray[tile2];
+        bArray[tile2] = temp;
+
+        //switch the tiles in the integer array (used to know if other array is sorted)
+        int tempInt = bArrayInt[tile1];
+        bArrayInt[tile1] = bArrayInt[tile2];
+        bArrayInt[tile2] = tempInt;
+
+        drawBitmapArray();// redraw the array after swapping the pictures
+    }
+
+    //find quadrant that x,y coordinate is located in
+    public int findTileQuadrant(int xCoord, int yCoord){
+        int quadrant;
+        int row=1;
+        int col=1;
+
+        //determine column of x coordinate
+        if(xCoord>0 && xCoord<quarterWidth){
+            //in first column
+            col=1;
+        }
+        else if(xCoord>quarterWidth && xCoord<quarterWidth*2){
+            //in second column
+            col=2;
+        }
+        else if(xCoord>quarterWidth*2 && xCoord<quarterWidth*3) {
+            //in third column
+            col=3;
+        }
+        else if(xCoord>quarterWidth*3 && xCoord<quarterWidth*4){
+            //in fourth column
+            col=4;
+        }
+
+        //determine row of y coordinate
+        //errorOffset is used to make the click be in the correct spot
+        int errorOffsetY = 200;
+        if(yCoord>0 && yCoord<quarterHeight +errorOffsetY){
+            //in first row
+            row=1;
+        }
+        else if(yCoord>quarterHeight +errorOffsetY && yCoord<quarterHeight*2 +errorOffsetY){
+            //in second row
+            row=2;
+        }
+        else if(yCoord>quarterHeight*2 +errorOffsetY && yCoord<quarterHeight*3 +errorOffsetY) {
+            //in third row
+            row=3;
+        }
+        else if(yCoord>quarterHeight*3 +errorOffsetY && yCoord<quarterHeight*4 +errorOffsetY){
+            //in fourth row
+            row=4;
+        }
+
+        //determine quadrant from column and row
+        int [][] quadMatrix = {
+                {1,2,3,4},
+                {5,6,7,8},
+                {9,10,11,12},
+                {13,14,15,16}
+        };
+
+        quadrant = quadMatrix[row-1][col-1]; //row-1 and col-1 because the 2D array starts at 0
+
+        return quadrant;
+    }
+
+    //shuffle array
+    public void shuffle(){
+        int numElements = bArray.length;
+
+        for (int i=0; i< numElements; i++){
+            int s = i + (int)(Math.random() * ( numElements -i) );
+
+            //shuffle the tiles in the bitmap array
+            Bitmap temp = bArray[s];
+            bArray[s] = bArray[i];
+            bArray[i] = temp;
+
+            //shuffle the tiles in the integer array (used to know if other array is sorted)
+            int tempInt = bArrayInt[s];
+            bArrayInt[s] = bArrayInt[i];
+            bArrayInt[i] = tempInt;
+        }
+
+    }
+
+    //draw bitmaps from array
+    public void drawBitmapArray(){
         //draw 1st row
         for(int i=0; i<5; i++){
             int offsetX = 0 + quarterWidth*i;
@@ -164,83 +282,24 @@ public class MainActivity extends AppCompatActivity {
         for(int i=12; i<16; i++){
             int offsetX = 0 + quarterWidth*(i-12);
             int offsetY = 0 + quarterHeight*(i-12);
-            c.drawBitmap(bArray[i], offsetX, quarterHeight*3, null );
+            c.drawBitmap(bArray[i], offsetX, quarterHeight * 3, null);
         }
         iv.setImageBitmap(b);
-
+        isSolved(); //check to see if the puzzle was solved after drawing
     }
 
-    //detects touch and release coordinates
-    @Override
-    public boolean onTouchEvent(MotionEvent event) {
-        int x = (int)event.getX();
-        int y = (int)event.getY();
-        switch (event.getAction()) {
-            case MotionEvent.ACTION_UP: {
-                Toast.makeText(getBaseContext(), "Released at x=" + x + " y=" + y, Toast.LENGTH_SHORT).show();
-                return true;}
-            case MotionEvent.ACTION_DOWN: {
-                Toast.makeText(getBaseContext(), "Pressed at x=" + x + " y=" + y, Toast.LENGTH_SHORT).show();
-            }
-            default:{
-                return false;
+    //check bitmap array order to see if puzzle has been solved
+    public void isSolved(){
+        boolean solved = true;
+
+        for(int i=0; i<bArrayInt.length; i++){
+            if( bArrayInt[i] != solvedArrayInt[i]){
+                solved = false;
             }
         }
-    }
-
-    //find quadrant that x,y coordinate is located in
-    public int findTileQuadrant(int quarterHeight, int quarterWidth, int xCoord, int yCoord){
-        int quadrant;
-        int row=0;
-        int col=0;
-
-        //determine column of x coordinate
-        if(xCoord>0 && xCoord<quarterWidth){
-            //in first column
-            col=1;
+        if(solved){
+            solvedText.setText("You solved the puzzle!");
         }
-        else if(xCoord>quarterWidth && xCoord<quarterWidth*2){
-            //in second column
-            col=2;
-        }
-        else if(xCoord>quarterWidth*2 && xCoord<quarterWidth*3) {
-            //in third column
-            col=3;
-        }
-        else if(xCoord>quarterWidth*3 && xCoord<quarterWidth*4){
-            //in fourth column
-            col=4;
-        }
-
-        //determine row of y coordinate
-        if(yCoord>0 && yCoord<quarterHeight){
-            //in first row
-            row=1;
-        }
-        else if(yCoord>quarterHeight && yCoord<quarterHeight*2){
-            //in second row
-            row=2;
-        }
-        else if(yCoord>quarterHeight*2 && yCoord<quarterHeight*3) {
-            //in third row
-            row=3;
-        }
-        else if(yCoord>quarterHeight*3 && yCoord<quarterHeight*4){
-            //in fourth row
-            row=4;
-        }
-
-        //determine quadrant from column and row
-        int [][] quadMatrix = new int[][]{
-                {1,2,3,4},
-                {5,6,7,8},
-                {9,10,11,12},
-                {13,14,15,16}
-        };
-
-        quadrant = quadMatrix[row][col];
-
-        return quadrant;
     }
 
 }
